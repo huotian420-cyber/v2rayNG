@@ -15,6 +15,7 @@ import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.util.SubscriptionHeaderUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,6 +49,7 @@ class SubEditActivity : BaseActivity() {
         binding.etRemarks.text = Utils.getEditable(subItem.remarks)
         binding.etUrl.text = Utils.getEditable(subItem.url)
         binding.etUserAgent.text = Utils.getEditable(subItem.userAgent)
+        binding.etCustomHeaders.text = Utils.getEditable(subItem.customHeaders)
         binding.etFilter.text = Utils.getEditable(subItem.filter)
         binding.chkEnable.isChecked = subItem.enabled
         binding.autoUpdateCheck.isChecked = subItem.autoUpdate
@@ -63,6 +65,8 @@ class SubEditActivity : BaseActivity() {
     private fun clearServer(): Boolean {
         binding.etRemarks.text = null
         binding.etUrl.text = null
+        binding.etUserAgent.text = null
+        binding.etCustomHeaders.text = null
         binding.etFilter.text = null
         binding.chkEnable.isChecked = true
         binding.etPreProfile.text = null
@@ -79,6 +83,7 @@ class SubEditActivity : BaseActivity() {
         subItem.remarks = binding.etRemarks.text.toString()
         subItem.url = binding.etUrl.text.toString()
         subItem.userAgent = binding.etUserAgent.text.toString()
+        subItem.customHeaders = binding.etCustomHeaders.text.toString()
         subItem.filter = binding.etFilter.text.toString()
         subItem.enabled = binding.chkEnable.isChecked
         subItem.autoUpdate = binding.autoUpdateCheck.isChecked
@@ -102,6 +107,10 @@ class SubEditActivity : BaseActivity() {
                     return false
                 }
             }
+        }
+        if (!SubscriptionHeaderUtil.isValid(subItem.customHeaders)) {
+            toast(R.string.sub_setting_custom_headers_invalid)
+            return false
         }
 
         MmkvManager.encodeSubscription(editSubId, subItem)
