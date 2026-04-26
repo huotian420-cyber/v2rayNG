@@ -49,3 +49,11 @@ jobs:
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
         chmod 755 gradlew
         ./gradlew :app:assembleFdroidDebug
+
+    - name: Upload debug APKs
+      uses: actions/upload-artifact@v7
+      if: ${{ success() }}
+      with:
+        name: fdroid-debug-apk
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*.apk
+        if-no-files-found: error
