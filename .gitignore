@@ -17,6 +17,7 @@ V2rayNG/app/release/output.json
 # Ignore build directories and captures
 /build
 /captures
+/artifacts
 V2rayNG/app/build
 V2rayNG/build
 V2rayNG/local.properties

@@ -30,3 +30,16 @@ For a quick start, read guide for [Go Mobile](https://github.com/golang/go/wiki/
 
 v2rayNG can run on Android Emulators. For WSA, VPN permission need to be granted via
 `appops set [package name] ACTIVATE_VPN allow`
+
+### Fork maintenance
+
+This fork carries custom subscription header support and a signed F-Droid release workflow.
+
+To sync official upstream changes from `2dust/v2rayNG` into local `master` and optionally trigger a new signed APK build:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\sync-upstream.ps1 -PushOrigin -RunSignedBuild
+```
+
+The script will auto-add `upstream` on first run, fetch `origin` and `upstream`, fast-forward local `master` to `origin/master`, merge `upstream/master`, and optionally push plus trigger `build-fdroid-release.yml`.
+Use `-FetchOnly` when you just want to validate remote setup and fetch official refs without changing local branches.
