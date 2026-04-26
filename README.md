@@ -28,6 +28,25 @@ Android project under V2rayNG folder can be compiled directly in Android Studio,
 The aar can be compiled from the Golang project [AndroidLibV2rayLite](https://github.com/2dust/AndroidLibV2rayLite) or [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite).
 For a quick start, read guide for [Go Mobile](https://github.com/golang/go/wiki/Mobile) and [Makefiles for Go Developers](https://tutorialedge.net/golang/makefiles-for-go-developers/)
 
+#### Rebuild local libv2ray AAR
+
+This fork keeps `AndroidLibXrayLite` as a submodule, but `V2rayNG/app/libs/libv2ray.aar` is ignored and must be rebuilt locally when the submodule changes.
+
+From the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-libv2ray.ps1
+```
+
+The script will:
+- resolve `JAVA_HOME`, Android SDK, and Android NDK
+- bootstrap `gomobile` and `gobind` if they are missing
+- run `gomobile init`
+- build `artifacts/libv2ray/libv2ray.aar`
+- copy the result to `V2rayNG/app/libs/libv2ray.aar`
+
+If your NDK is not installed under the Android SDK directory, set `ANDROID_NDK_HOME` first.
+
 v2rayNG can run on Android Emulators. For WSA, VPN permission need to be granted via
 `appops set [package name] ACTIVATE_VPN allow`
 

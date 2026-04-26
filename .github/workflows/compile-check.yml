@@ -6,6 +6,8 @@ on:
 jobs:
   compile-check:
     runs-on: ubuntu-latest
+    env:
+      NDK_VERSION: 28.2.13676358
 
     steps:
     - name: Checkout code
@@ -21,27 +23,31 @@ jobs:
         cmdline-tools-version: '13114758'
         packages: 'platforms;android-36.1 build-tools;36.1.0 platform-tools'
 
-    - name: Fetch AndroidLibXrayLite tag
-      run: |
-        pushd AndroidLibXrayLite
-        CURRENT_TAG=$(git describe --tags --abbrev=0)
-        echo "Current tag in this repo: $CURRENT_TAG"
-        echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_ENV
-        popd
-
-    - name: Download libv2ray
-      uses: robinraju/release-downloader@v1.13
-      with:
-        repository: '2dust/AndroidLibXrayLite'
-        tag: ${{ env.CURRENT_TAG }}
-        fileName: 'libv2ray.aar'
-        out-file-path: V2rayNG/app/libs/
-
     - name: Setup Java
       uses: actions/setup-java@v5
       with:
         distribution: 'temurin'
         java-version: '21'
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: AndroidLibXrayLite/go.mod
+        cache-dependency-path: |
+          AndroidLibXrayLite/go.sum
+          AndroidLibXrayLite/go.mod
+
+    - name: Install NDK
+      run: |
+        echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+          --channel=0 \
+          --install "ndk;${NDK_VERSION}"
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+        echo "NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+    - name: Build libv2ray from source
+      shell: pwsh
+      run: .\scripts\build-libv2ray.ps1
 
     - name: Compile check
       run: |

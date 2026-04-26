@@ -24,6 +24,7 @@ import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.QRCodeDecoder
+import com.v2ray.ang.util.SubscriptionSecureUtil
 import com.v2ray.ang.util.Utils
 import java.net.URI
 
@@ -554,6 +555,7 @@ object AngConfigManager {
             if (configText.isEmpty()) {
                 return SubscriptionUpdateResult(failureCount = 1)
             }
+            configText = SubscriptionSecureUtil.resolveDownloadedContent(url, configText)
 
             val count = parseConfigViaSub(configText, it.guid, false)
             if (count > 0) {
@@ -608,7 +610,11 @@ object AngConfigManager {
         }
         val uri = URI(Utils.fixIllegalUrl(url))
         val subItem = SubscriptionItem()
-        subItem.remarks = uri.fragment ?: "import sub"
+        subItem.remarks = if (SubscriptionSecureUtil.hasSecureFragmentKey(url)) {
+            "import sub"
+        } else {
+            uri.fragment ?: "import sub"
+        }
         subItem.url = url
         MmkvManager.encodeSubscription("", subItem)
         return 1

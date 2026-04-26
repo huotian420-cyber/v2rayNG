@@ -4,6 +4,17 @@ plugins {
     id("com.jaredsburrows.license")
 }
 
+val libv2rayAar = layout.projectDirectory.file("libs/libv2ray.aar")
+val verifyLibv2rayAar by tasks.registering {
+    doLast {
+        if (!libv2rayAar.asFile.isFile) {
+            throw GradleException(
+                "Missing ${libv2rayAar.asFile}. Rebuild it from the repository root with scripts/build-libv2ray.ps1."
+            )
+        }
+    }
+}
+
 android {
     namespace = "com.v2ray.ang"
     compileSdk = 36
@@ -134,6 +145,10 @@ android {
         }
     }
 
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(verifyLibv2rayAar)
 }
 
 dependencies {

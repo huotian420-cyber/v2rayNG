@@ -172,6 +172,18 @@ object Utils {
                 }
             }
 
+            // Handle bracketed IPv6 addresses with optional port.
+            if (addr.startsWith("[")) {
+                val closing = addr.indexOf(']')
+                if (closing > 0) {
+                    val host = addr.substring(1, closing)
+                    val suffix = addr.substring(closing + 1)
+                    if (suffix.isEmpty() || (suffix.startsWith(":") && suffix.drop(1).all { it.isDigit() })) {
+                        addr = host
+                    }
+                }
+            }
+
             // Handle IPv4-mapped IPv6 addresses
             if (addr.startsWith("::ffff:") && '.' in addr) {
                 addr = addr.drop(7)

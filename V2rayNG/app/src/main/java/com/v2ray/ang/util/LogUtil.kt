@@ -27,7 +27,7 @@ object LogUtil {
 
     @Suppress("unused")
     fun refreshLogLevel() {
-        cachedMinPriority = parsePriority(MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL, DEFAULT_LEVEL))
+        cachedMinPriority = resolveConfiguredPriority()
     }
 
     private fun minPriority(): Int {
@@ -41,10 +41,18 @@ object LogUtil {
             if (current != CACHE_UNSET) {
                 current
             } else {
-                parsePriority(MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL, DEFAULT_LEVEL)).also {
+                resolveConfiguredPriority().also {
                     cachedMinPriority = it
                 }
             }
+        }
+    }
+
+    private fun resolveConfiguredPriority(): Int {
+        return try {
+            parsePriority(MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL, DEFAULT_LEVEL))
+        } catch (_: Exception) {
+            parsePriority(DEFAULT_LEVEL)
         }
     }
 
@@ -55,13 +63,16 @@ object LogUtil {
     private fun log(priority: Int, tag: String, message: String, throwable: Throwable? = null) {
         if (!isEnabled(priority)) return
 
-        when {
-            throwable == null -> Log.println(priority, tag, message)
-            priority >= Log.ERROR -> Log.e(tag, message, throwable)
-            priority == Log.WARN -> Log.w(tag, message, throwable)
-            priority == Log.INFO -> Log.i(tag, message, throwable)
-            priority == Log.DEBUG -> Log.d(tag, message, throwable)
-            else -> Log.v(tag, message, throwable)
+        try {
+            when {
+                throwable == null -> Log.println(priority, tag, message)
+                priority >= Log.ERROR -> Log.e(tag, message, throwable)
+                priority == Log.WARN -> Log.w(tag, message, throwable)
+                priority == Log.INFO -> Log.i(tag, message, throwable)
+                priority == Log.DEBUG -> Log.d(tag, message, throwable)
+                else -> Log.v(tag, message, throwable)
+            }
+        } catch (_: RuntimeException) {
         }
     }
 
