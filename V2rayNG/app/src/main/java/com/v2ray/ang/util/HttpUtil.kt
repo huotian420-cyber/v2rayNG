@@ -150,6 +150,7 @@ object HttpUtil {
     fun getUrlContentWithUserAgent(
         url: String?,
         userAgent: String?,
+        customHeaders: String? = null,
         timeout: Int = 15000,
         httpPort: Int = 0,
         proxyUsername: String? = null,
@@ -158,20 +159,26 @@ object HttpUtil {
         var currentUrl = url
         var redirects = 0
         val maxRedirects = 3
+        val parsedHeaders = SubscriptionHeaderUtil.parse(customHeaders)
 
         while (redirects++ < maxRedirects) {
             if (currentUrl == null) continue
             val client = buildOkHttpClient(timeout, httpPort, proxyUsername, proxyPassword, followRedirects = false)
-            val finalUserAgent = if (userAgent.isNullOrBlank()) {
+            val finalUserAgent = parsedHeaders["User-Agent"] ?: if (userAgent.isNullOrBlank()) {
                 "v2rayNG/${BuildConfig.VERSION_NAME}"
             } else {
-                userAgent
+                userAgent.orEmpty()
             }
             val requestBuilder = Request.Builder()
                 .url(currentUrl)
                 .get()
                 .header("User-agent", finalUserAgent)
                 .header("Connection", "close")
+            parsedHeaders.forEach { (name, value) ->
+                if (!name.equals("User-Agent", ignoreCase = true)) {
+                    requestBuilder.header(name, value)
+                }
+            }
             if (httpPort != 0 && !proxyUsername.isNullOrBlank() && !proxyPassword.isNullOrBlank()) {
                 requestBuilder.header("Proxy-Authorization", Credentials.basic(proxyUsername, proxyPassword))
             }
