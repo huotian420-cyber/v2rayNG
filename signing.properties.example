@@ -1,0 +1,5 @@
+# Local signing material for reproducible release updates.
+storeFile=./v2rayng-release.jks
+storePassword=change-me
+keyAlias=v2rayng-release
+keyPassword=change-me

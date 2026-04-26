@@ -1,4 +1,4 @@
-name: Build F-Droid release APK
+name: Build signed F-Droid release APK
 
 on:
   workflow_dispatch:
@@ -43,17 +43,28 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
 
-    - name: Build F-Droid release APKs
+    - name: Decode keystore
+      uses: timheuer/base64-to-file@v1.2.4
+      id: android_keystore
+      with:
+        fileName: "android_keystore.jks"
+        encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
+
+    - name: Build signed F-Droid release APKs
       run: |
         cd ${{ github.workspace }}/V2rayNG
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
         chmod 755 gradlew
-        ./gradlew :app:assembleFdroidRelease
+        ./gradlew :app:assembleFdroidRelease \
+          -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} \
+          -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} \
+          -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} \
+          -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
 
-    - name: Upload F-Droid release APKs
+    - name: Upload signed F-Droid release APKs
       uses: actions/upload-artifact@v7
       if: ${{ success() }}
       with:
-        name: fdroid-release-apk
+        name: fdroid-release-apk-signed
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/release/*.apk
         if-no-files-found: error
