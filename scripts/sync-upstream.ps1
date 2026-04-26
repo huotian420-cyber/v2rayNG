@@ -38,11 +38,20 @@ if ($trackedChanges) {
     throw "Tracked changes detected. Commit or stash them before syncing upstream."
 }
 
-$remoteUrl = (& git remote get-url $UpstreamRemote 2>$null)
-if ($LASTEXITCODE -ne 0 -or -not $remoteUrl) {
+$remoteNames = (& git remote)
+if ($LASTEXITCODE -ne 0) {
+    throw "Unable to enumerate git remotes."
+}
+
+if ($remoteNames -notcontains $UpstreamRemote) {
     Invoke-Git -Args @("remote", "add", $UpstreamRemote, $OfficialRepo)
     Write-Host "Added remote $UpstreamRemote -> $OfficialRepo"
-} elseif ($remoteUrl.Trim() -ne $OfficialRepo) {
+    $remoteUrl = $OfficialRepo
+} else {
+    $remoteUrl = (& git remote get-url $UpstreamRemote).Trim()
+}
+
+if ($remoteUrl.Trim() -ne $OfficialRepo) {
     throw "Remote '$UpstreamRemote' points to '$($remoteUrl.Trim())', expected '$OfficialRepo'."
 }
 
