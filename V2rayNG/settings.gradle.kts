@@ -3,14 +3,14 @@ pluginManagement {
         maven("https://maven.aliyun.com/repository/google") {
             content {
                 includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("com\\.google\\.android.*")
                 includeGroupByRegex("androidx.*")
             }
         }
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("com\\.google\\.android.*")
                 includeGroupByRegex("androidx.*")
             }
         }
@@ -24,7 +24,7 @@ dependencyResolutionManagement {
         maven("https://maven.aliyun.com/repository/google") {
             content {
                 includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("com\\.google\\.android.*")
                 includeGroupByRegex("androidx.*")
             }
         }
