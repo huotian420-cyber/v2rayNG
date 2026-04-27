@@ -30,6 +30,7 @@ import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.PackageUidResolver
 import com.v2ray.ang.util.Utils
+import java.io.File
 
 object V2rayConfigManager {
     private var initConfigCache: String? = null
@@ -537,6 +538,21 @@ object V2rayConfigManager {
         return true
     }
 
+    internal fun remapPresetGeoipRule(ipRule: String, geoipOnlyCnPrivateAvailable: Boolean): String {
+        if (!geoipOnlyCnPrivateAvailable) return ipRule
+        return when (ipRule) {
+            AppConfig.GEOIP_CN -> "ext:${AppConfig.GEOIP_ONLY_CN_PRIVATE_DAT}:cn"
+            AppConfig.GEOIP_PRIVATE -> "ext:${AppConfig.GEOIP_ONLY_CN_PRIVATE_DAT}:private"
+            else -> ipRule
+        }
+    }
+
+    private fun hasGeoipOnlyCnPrivateAsset(context: Context): Boolean {
+        val assetDir = Utils.userAssetPath(context)
+        if (assetDir.isBlank()) return false
+        return File(assetDir, AppConfig.GEOIP_ONLY_CN_PRIVATE_DAT).isFile
+    }
+
     /**
      * Adds a specific ruleset item to the routing configuration.
      *
@@ -550,16 +566,26 @@ object V2rayConfigManager {
             }
 
             val rule = JsonUtil.fromJson(JsonUtil.toJson(item), RulesBean::class.java) ?: return
+            val geoipOnlyCnPrivateAvailable = hasGeoipOnlyCnPrivateAsset(context)
+            var warnedMissingGeoipOnlyCnPrivate = false
 
             // Replace specific geoip rules with ext versions
             rule.ip?.let { ipList ->
                 val updatedIpList = ArrayList<String>()
                 ipList.forEach { ip ->
-                    when (ip) {
-                        AppConfig.GEOIP_CN -> updatedIpList.add("ext:${AppConfig.GEOIP_ONLY_CN_PRIVATE_DAT}:cn")
-                        AppConfig.GEOIP_PRIVATE -> updatedIpList.add("ext:${AppConfig.GEOIP_ONLY_CN_PRIVATE_DAT}:private")
-                        else -> updatedIpList.add(ip)
+                    val remapped = remapPresetGeoipRule(ip, geoipOnlyCnPrivateAvailable)
+                    if (!geoipOnlyCnPrivateAvailable
+                        && remapped == ip
+                        && (ip == AppConfig.GEOIP_CN || ip == AppConfig.GEOIP_PRIVATE)
+                        && !warnedMissingGeoipOnlyCnPrivate
+                    ) {
+                        warnedMissingGeoipOnlyCnPrivate = true
+                        LogUtil.w(
+                            AppConfig.TAG,
+                            "Missing ${AppConfig.GEOIP_ONLY_CN_PRIVATE_DAT}; falling back to bundled geoip.dat rules"
+                        )
                     }
+                    updatedIpList.add(remapped)
                 }
                 rule.ip = updatedIpList
             }

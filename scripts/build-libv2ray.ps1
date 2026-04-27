@@ -184,6 +184,44 @@ function Resolve-AndroidNdkRoot {
     throw "Unable to find Android NDK. Set ANDROID_NDK_HOME/NDK_HOME or install an NDK under the Android SDK directory."
 }
 
+function Ensure-AndroidLibAssets {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$AndroidLibRoot
+    )
+
+    $assetsDir = Join-Path $AndroidLibRoot "assets"
+    New-Item -ItemType Directory -Path $assetsDir -Force | Out-Null
+
+    $assetDownloads = @(
+        @{
+            Name = "geoip.dat"
+            Url = "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat"
+        },
+        @{
+            Name = "geosite.dat"
+            Url = "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat"
+        },
+        @{
+            Name = "geoip-only-cn-private.dat"
+            Url = "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/geoip-only-cn-private.dat"
+        }
+    )
+
+    foreach ($asset in $assetDownloads) {
+        $target = Join-Path $assetsDir $asset.Name
+        if (Test-Path -LiteralPath $target) {
+            continue
+        }
+
+        Write-Host "Downloading $($asset.Name)..."
+        Invoke-WebRequest -Uri $asset.Url -OutFile $target
+        if (-not (Test-Path -LiteralPath $target)) {
+            throw "Failed to download $($asset.Name) to '$target'."
+        }
+    }
+}
+
 function Ensure-GoMobileTools {
     param(
         [Parameter(Mandatory = $true)]
@@ -251,6 +289,8 @@ $targetSourcesJar = Join-Path $appLibsDir "libv2ray-sources.jar"
 if (-not (Test-Path -LiteralPath $androidLibRoot)) {
     throw "AndroidLibXrayLite submodule not found at '$androidLibRoot'."
 }
+
+Ensure-AndroidLibAssets -AndroidLibRoot $androidLibRoot
 
 $goExe = Resolve-ToolPath -Name "go"
 if (-not $goExe) {

@@ -109,6 +109,26 @@ object Utils {
         return tryDecodeBase64(text) ?: text?.trimEnd('=')?.let { tryDecodeBase64(it) }.orEmpty()
     }
 
+    private fun compactBase64Text(text: String): String {
+        return text.filterNot(Char::isWhitespace)
+    }
+
+    private fun isPlausibleBase64Text(text: String): Boolean {
+        if (text.length < 4) return false
+        if (text.contains("://")) return false
+        if (text.any { it in ":?#&{}[]," }) return false
+        return text.all {
+            it in 'A'..'Z'
+                || it in 'a'..'z'
+                || it in '0'..'9'
+                || it == '+'
+                || it == '/'
+                || it == '-'
+                || it == '_'
+                || it == '='
+        }
+    }
+
     /**
      * Try to decode a base64 encoded string.
      *
@@ -117,14 +137,18 @@ object Utils {
      */
     fun tryDecodeBase64(text: String?): String? {
         if (text.isNullOrEmpty()) return null
+        val compact = compactBase64Text(text)
+        if (!isPlausibleBase64Text(compact)) return null
 
         try {
-            return Base64.decode(text, Base64.NO_WRAP).toString(Charsets.UTF_8)
+            return Base64.decode(compact, Base64.NO_WRAP).toString(Charsets.UTF_8)
+        } catch (_: IllegalArgumentException) {
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to decode standard base64", e)
         }
         try {
-            return Base64.decode(text, Base64.NO_WRAP.or(Base64.URL_SAFE)).toString(Charsets.UTF_8)
+            return Base64.decode(compact, Base64.NO_WRAP.or(Base64.URL_SAFE)).toString(Charsets.UTF_8)
+        } catch (_: IllegalArgumentException) {
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to decode URL-safe base64", e)
         }

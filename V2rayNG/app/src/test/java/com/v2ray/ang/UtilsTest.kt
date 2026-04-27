@@ -3,6 +3,7 @@ package com.v2ray.ang
 import com.v2ray.ang.util.Utils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -16,6 +17,11 @@ class UtilsTest {
     @Test
     fun test_parseInt() {
         assertEquals(Utils.parseInt("1234"), 1234)
+    }
+
+    @Test
+    fun test_tryDecodeBase64() {
+        assertNull(Utils.tryDecodeBase64("vless://uuid@example.com:443?security=tls"))
     }
 
     @Test
