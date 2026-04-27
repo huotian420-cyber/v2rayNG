@@ -5,13 +5,16 @@ import com.v2ray.ang.dto.ProfileItem
 import com.v2ray.ang.dto.V2rayConfig.OutboundBean
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.enums.NetworkType
-import com.v2ray.ang.extension.idnHost
 import com.v2ray.ang.handler.V2rayConfigManager
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import java.net.URI
 
 object ShadowsocksFmt : FmtBase() {
+    private fun URI.hostNoBrackets(): String {
+        return host?.replace("[", "")?.replace("]", "").orEmpty()
+    }
+
     /**
      * Parses a Shadowsocks URI string into a ProfileItem object.
      *
@@ -32,12 +35,13 @@ object ShadowsocksFmt : FmtBase() {
         val config = ProfileItem.create(EConfigType.SHADOWSOCKS)
 
         val uri = URI(Utils.fixIllegalUrl(str))
-        if (uri.idnHost.isEmpty()) return null
+        val host = uri.hostNoBrackets()
+        if (host.isEmpty()) return null
         if (uri.port <= 0) return null
         if (uri.userInfo.isNullOrEmpty()) return null
 
         config.remarks = Utils.decodeURIComponent(uri.fragment.orEmpty()).let { it.ifEmpty { "none" } }
-        config.server = uri.idnHost
+        config.server = host
         config.serverPort = uri.port.toString()
 
         val result = if (uri.userInfo.contains(":")) {
@@ -55,7 +59,7 @@ object ShadowsocksFmt : FmtBase() {
             if (queryParam["plugin"]?.contains("obfs=http") == true) {
                 val queryPairs = HashMap<String, String>()
                 for (pair in queryParam["plugin"]?.split(";") ?: listOf()) {
-                    val idx = pair.split("=")
+                    val idx = pair.split("=", limit = 2)
                     if (idx.count() == 2) {
                         queryPairs.put(idx.first(), idx.last())
                     }

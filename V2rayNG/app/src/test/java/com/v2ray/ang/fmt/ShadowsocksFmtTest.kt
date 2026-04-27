@@ -171,6 +171,19 @@ class ShadowsocksFmtTest {
     }
 
     @Test
+    fun test_parseSip002_preservesPluginPathContainingEquals() {
+        val ssUrl = "ss://aes-256-gcm:mypassword@example.com:8388?plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dcdn.example.com%3Bpath%3D%2Fedge%3Ftoken%3Da%3Db#Plugin%20Path"
+
+        val result = ShadowsocksFmt.parseSip002(ssUrl)
+
+        assertNotNull(result)
+        assertEquals("tcp", result?.network)
+        assertEquals("http", result?.headerType)
+        assertEquals("cdn.example.com", result?.host)
+        assertEquals("/edge?token=a=b", result?.path)
+    }
+
+    @Test
     fun test_parseSip002_returnsNullForEmptyHost() {
         // Manually construct URL with empty host (can't use helper)
         val methodPassword = "aes-256-gcm:password"

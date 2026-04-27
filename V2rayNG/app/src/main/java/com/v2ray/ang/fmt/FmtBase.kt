@@ -3,13 +3,16 @@ package com.v2ray.ang.fmt
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.ProfileItem
 import com.v2ray.ang.enums.NetworkType
-import com.v2ray.ang.extension.nullIfBlank
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.Utils
 import java.net.URI
 
 open class FmtBase {
+    private fun String?.orNullIfBlank(): String? {
+        return this?.takeIf { it.isNotBlank() }
+    }
+
     /**
      * Converts a ProfileItem object to a URI string.
      *
@@ -42,8 +45,26 @@ open class FmtBase {
      * @return a map of query parameters
      */
     fun getQueryParam(uri: URI): Map<String, String> {
-        return uri.rawQuery.split("&")
-            .associate { it.split("=").let { (k, v) -> k to Utils.decodeURIComponent(v) } }
+        val rawQuery = uri.rawQuery ?: return emptyMap()
+        if (rawQuery.isBlank()) return emptyMap()
+
+        val query = linkedMapOf<String, String>()
+        rawQuery.split("&")
+            .forEach { part ->
+                if (part.isBlank()) return@forEach
+
+                val pieces = part.split("=", limit = 2)
+                val key = pieces[0]
+                if (key.isBlank()) return@forEach
+
+                val value = if (pieces.size > 1) {
+                    Utils.decodeURIComponent(pieces[1])
+                } else {
+                    ""
+                }
+                query[key] = value
+            }
+        return query
     }
 
     /**
@@ -103,17 +124,17 @@ open class FmtBase {
     fun getQueryDic(config: ProfileItem): HashMap<String, String> {
         val dicQuery = HashMap<String, String>()
         dicQuery["security"] = config.security?.ifEmpty { "none" }.orEmpty()
-        config.sni?.nullIfBlank()?.let { dicQuery["sni"] = it }
-        config.alpn?.nullIfBlank()?.let { dicQuery["alpn"] = it }
-        config.echConfigList?.nullIfBlank()?.let { dicQuery["ech"] = it }
-        config.pinnedCA256?.nullIfBlank()?.let { dicQuery["pcs"] = it }
-        config.fingerPrint?.nullIfBlank()?.let { dicQuery["fp"] = it }
-        config.publicKey?.nullIfBlank()?.let { dicQuery["pbk"] = it }
-        config.shortId?.nullIfBlank()?.let { dicQuery["sid"] = it }
-        config.spiderX?.nullIfBlank()?.let { dicQuery["spx"] = it }
-        config.mldsa65Verify?.nullIfBlank()?.let { dicQuery["pqv"] = it }
-        config.flow?.nullIfBlank()?.let { dicQuery["flow"] = it }
-        config.finalMask?.nullIfBlank()?.let { dicQuery["fm"] = it }
+        config.sni.orNullIfBlank()?.let { dicQuery["sni"] = it }
+        config.alpn.orNullIfBlank()?.let { dicQuery["alpn"] = it }
+        config.echConfigList.orNullIfBlank()?.let { dicQuery["ech"] = it }
+        config.pinnedCA256.orNullIfBlank()?.let { dicQuery["pcs"] = it }
+        config.fingerPrint.orNullIfBlank()?.let { dicQuery["fp"] = it }
+        config.publicKey.orNullIfBlank()?.let { dicQuery["pbk"] = it }
+        config.shortId.orNullIfBlank()?.let { dicQuery["sid"] = it }
+        config.spiderX.orNullIfBlank()?.let { dicQuery["spx"] = it }
+        config.mldsa65Verify.orNullIfBlank()?.let { dicQuery["pqv"] = it }
+        config.flow.orNullIfBlank()?.let { dicQuery["flow"] = it }
+        config.finalMask.orNullIfBlank()?.let { dicQuery["fm"] = it }
         config.kcpMtu?.let { dicQuery["mtu"] = it.toString() }
         config.kcpTti?.let { dicQuery["tti"] = it.toString() }
         // Add two keys for compatibility: "insecure" and "allowInsecure"
@@ -129,30 +150,30 @@ open class FmtBase {
         when (networkType) {
             NetworkType.TCP -> {
                 dicQuery["headerType"] = config.headerType?.ifEmpty { "none" }.orEmpty()
-                config.host?.nullIfBlank()?.let { dicQuery["host"] = it }
+                config.host.orNullIfBlank()?.let { dicQuery["host"] = it }
             }
 
             NetworkType.KCP -> {
                 dicQuery["headerType"] = config.headerType?.ifEmpty { "none" }.orEmpty()
-                config.seed?.nullIfBlank()?.let { dicQuery["seed"] = it }
+                config.seed.orNullIfBlank()?.let { dicQuery["seed"] = it }
             }
 
             NetworkType.WS, NetworkType.HTTP_UPGRADE -> {
-                config.host?.nullIfBlank()?.let { dicQuery["host"] = it }
-                config.path?.nullIfBlank()?.let { dicQuery["path"] = it }
+                config.host.orNullIfBlank()?.let { dicQuery["host"] = it }
+                config.path.orNullIfBlank()?.let { dicQuery["path"] = it }
             }
 
             NetworkType.XHTTP -> {
-                config.host?.nullIfBlank()?.let { dicQuery["host"] = it }
-                config.path?.nullIfBlank()?.let { dicQuery["path"] = it }
-                config.xhttpMode?.nullIfBlank()?.let { dicQuery["mode"] = it }
-                config.xhttpExtra?.nullIfBlank()?.let { dicQuery["extra"] = it }
+                config.host.orNullIfBlank()?.let { dicQuery["host"] = it }
+                config.path.orNullIfBlank()?.let { dicQuery["path"] = it }
+                config.xhttpMode.orNullIfBlank()?.let { dicQuery["mode"] = it }
+                config.xhttpExtra.orNullIfBlank()?.let { dicQuery["extra"] = it }
             }
 
             NetworkType.HTTP, NetworkType.H2 -> {
                 dicQuery["type"] = "http"
-                config.host?.nullIfBlank()?.let { dicQuery["host"] = it }
-                config.path?.nullIfBlank()?.let { dicQuery["path"] = it }
+                config.host.orNullIfBlank()?.let { dicQuery["host"] = it }
+                config.path.orNullIfBlank()?.let { dicQuery["path"] = it }
             }
 
 //            NetworkType.QUIC -> {
@@ -162,9 +183,9 @@ open class FmtBase {
 //            }
 
             NetworkType.GRPC -> {
-                config.mode?.nullIfBlank()?.let { dicQuery["mode"] = it }
-                config.authority?.nullIfBlank()?.let { dicQuery["authority"] = it }
-                config.serviceName?.nullIfBlank()?.let { dicQuery["serviceName"] = it }
+                config.mode.orNullIfBlank()?.let { dicQuery["mode"] = it }
+                config.authority.orNullIfBlank()?.let { dicQuery["authority"] = it }
+                config.serviceName.orNullIfBlank()?.let { dicQuery["serviceName"] = it }
             }
 
             else -> {}

@@ -4,13 +4,19 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.ProfileItem
 import com.v2ray.ang.dto.V2rayConfig.OutboundBean
 import com.v2ray.ang.enums.EConfigType
-import com.v2ray.ang.extension.idnHost
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.V2rayConfigManager
 import com.v2ray.ang.util.Utils
 import java.net.URI
 
 object VlessFmt : FmtBase() {
+    private fun URI.hostNoBrackets(): String {
+        return host?.replace("[", "")?.replace("]", "").orEmpty()
+    }
+
+    internal fun normalizeEncryption(value: String?): String {
+        return value?.ifBlank { "none" } ?: "none"
+    }
 
     /**
      * Parses a Vless URI string into a ProfileItem object.
@@ -27,10 +33,10 @@ object VlessFmt : FmtBase() {
         val queryParam = getQueryParam(uri)
 
         config.remarks = Utils.decodeURIComponent(uri.fragment.orEmpty()).let { it.ifEmpty { "none" } }
-        config.server = uri.idnHost
+        config.server = uri.hostNoBrackets()
         config.serverPort = uri.port.toString()
         config.password = uri.userInfo
-        config.method = queryParam["encryption"] ?: "none"
+        config.method = normalizeEncryption(queryParam["encryption"])
 
         getItemFormQuery(config, queryParam, allowInsecure)
 
@@ -45,7 +51,7 @@ object VlessFmt : FmtBase() {
      */
     fun toUri(config: ProfileItem): String {
         val dicQuery = getQueryDic(config)
-        dicQuery["encryption"] = config.method ?: "none"
+        dicQuery["encryption"] = normalizeEncryption(config.method)
 
         return toUri(config, config.password, dicQuery)
     }
@@ -63,7 +69,7 @@ object VlessFmt : FmtBase() {
             vnext.address = getServerAddress(profileItem)
             vnext.port = profileItem.serverPort.orEmpty().toInt()
             vnext.users[0].id = profileItem.password.orEmpty()
-            vnext.users[0].encryption = profileItem.method
+            vnext.users[0].encryption = normalizeEncryption(profileItem.method)
             vnext.users[0].flow = profileItem.flow
         }
 
