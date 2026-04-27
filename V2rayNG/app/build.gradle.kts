@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,25 @@ plugins {
 }
 
 val libv2rayAar = layout.projectDirectory.file("libs/libv2ray.aar")
+val signingPropsFile = rootProject.layout.projectDirectory.file("../signing.properties").asFile
+val signingProps = Properties().apply {
+    if (signingPropsFile.isFile) {
+        signingPropsFile.inputStream().use(::load)
+    }
+}
+fun resolveSigningValue(gradleKey: String, propsKey: String): String? {
+    return (findProperty(gradleKey) as? String)
+        ?.takeIf { it.isNotBlank() }
+        ?: signingProps.getProperty(propsKey)?.takeIf { it.isNotBlank() }
+}
+
+val releaseStorePath = resolveSigningValue("android.injected.signing.store.file", "storeFile")?.let { rawPath ->
+    signingPropsFile.parentFile.resolve(rawPath).canonicalPath
+}
+val releaseStorePassword = resolveSigningValue("android.injected.signing.store.password", "storePassword")
+val releaseKeyAlias = resolveSigningValue("android.injected.signing.key.alias", "keyAlias")
+val releaseKeyPassword = resolveSigningValue("android.injected.signing.key.password", "keyPassword")
+
 val verifyLibv2rayAar by tasks.registering {
     doLast {
         if (!libv2rayAar.asFile.isFile) {
@@ -18,6 +39,24 @@ val verifyLibv2rayAar by tasks.registering {
 android {
     namespace = "com.v2ray.ang"
     compileSdk = 36
+
+    signingConfigs {
+        if (
+            !releaseStorePath.isNullOrBlank()
+            && !releaseStorePassword.isNullOrBlank()
+            && !releaseKeyAlias.isNullOrBlank()
+            && !releaseKeyPassword.isNullOrBlank()
+        ) {
+            create("release") {
+                storeFile = file(releaseStorePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.v2ray.ang"
@@ -52,6 +91,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
