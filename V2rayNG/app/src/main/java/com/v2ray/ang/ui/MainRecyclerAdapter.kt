@@ -150,8 +150,19 @@ class MainRecyclerAdapter(
     }
 
     fun setSelectServer(fromPosition: Int, toPosition: Int) {
-        notifyItemChanged(fromPosition)
-        notifyItemChanged(toPosition)
+        val hasFrom = fromPosition in data.indices
+        val hasTo = toPosition in data.indices
+
+        when {
+            hasFrom && hasTo && fromPosition != toPosition -> {
+                notifyItemChanged(fromPosition)
+                notifyItemChanged(toPosition)
+            }
+
+            hasTo -> notifyItemChanged(toPosition)
+            hasFrom -> notifyItemChanged(fromPosition)
+            else -> notifyDataSetChanged()
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
