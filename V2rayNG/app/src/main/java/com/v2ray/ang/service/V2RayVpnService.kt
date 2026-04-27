@@ -25,6 +25,7 @@ import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.V2RayServiceManager
 import com.v2ray.ang.util.LogUtil
+import com.v2ray.ang.util.MessageUtil
 import com.v2ray.ang.util.MyContextWrapper
 import com.v2ray.ang.util.Utils
 import java.lang.ref.SoftReference
@@ -158,12 +159,14 @@ class V2RayVpnService : VpnService(), ServiceControl {
         val prepare = prepare(this)
         if (prepare != null) {
             LogUtil.e(AppConfig.TAG, "StartCore-VPN: Permission not granted")
+            MessageUtil.sendMsg2UI(this, AppConfig.MSG_STATE_START_FAILURE, "")
             stopSelf()
             return
         }
 
         if (configureVpnService() != true) {
             LogUtil.e(AppConfig.TAG, "StartCore-VPN: Configuration failed")
+            MessageUtil.sendMsg2UI(this, AppConfig.MSG_STATE_START_FAILURE, "")
             stopSelf()
             return
         }
@@ -330,7 +333,7 @@ class V2RayVpnService : VpnService(), ServiceControl {
      * Starts the tun2socks process with the appropriate parameters.
      */
     private fun runTun2socks() {
-        if (SettingsManager.isUsingHevTun()) {
+        if (SettingsManager.shouldUseHevTun()) {
             tun2SocksService = TProxyService(
                 context = applicationContext,
                 vpnInterface = mInterface,

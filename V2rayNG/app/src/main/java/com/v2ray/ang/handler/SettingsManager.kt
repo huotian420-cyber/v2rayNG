@@ -26,6 +26,7 @@ import com.v2ray.ang.handler.MmkvManager.decodeSubsList
 import com.v2ray.ang.handler.MmkvManager.decodeSubscription
 import com.v2ray.ang.handler.MmkvManager.encodeSubscription
 import com.v2ray.ang.handler.MmkvManager.removeSubscription
+import com.v2ray.ang.service.TProxyService
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
@@ -460,6 +461,10 @@ object SettingsManager {
         return MmkvManager.decodeSettingsBool(AppConfig.PREF_USE_HEV_TUNNEL, true)
     }
 
+    fun shouldUseHevTun(): Boolean {
+        return isUsingHevTun() && TProxyService.isNativeLibAvailable()
+    }
+
     /**
      * Check if VPN mode is enabled.
      * @return True if VPN mode is enabled, false otherwise.
@@ -479,7 +484,7 @@ object SettingsManager {
         }
 
         // Must xray tun
-        if (isUsingHevTun()) {
+        if (shouldUseHevTun()) {
             return false
         }
 

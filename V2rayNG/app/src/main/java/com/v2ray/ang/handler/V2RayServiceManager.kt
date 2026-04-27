@@ -207,7 +207,7 @@ object V2RayServiceManager {
 
         currentConfig = config
         var tunFd = vpnInterface?.fd ?: 0
-        if (SettingsManager.isUsingHevTun()) {
+        if (SettingsManager.shouldUseHevTun()) {
             tunFd = 0
         }
 

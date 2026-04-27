@@ -371,7 +371,7 @@ object V2rayConfigManager {
     //region some sub function
 
     private fun needTun(): Boolean {
-        return SettingsManager.isVpnMode() && !SettingsManager.isUsingHevTun()
+        return SettingsManager.isVpnMode() && !SettingsManager.shouldUseHevTun()
     }
 
     /**
@@ -385,7 +385,7 @@ object V2rayConfigManager {
     private fun getInbounds(v2rayConfig: V2rayConfig): Boolean {
         try {
             val vpn = SettingsManager.isVpnMode()
-            val useHev = SettingsManager.isUsingHevTun()
+            val useHev = SettingsManager.shouldUseHevTun()
             val forcedByHev = vpn && useHev
 
             val enableLocalProxy = forcedByHev || MmkvManager.decodeSettingsBool(AppConfig.PREF_ENABLE_LOCAL_PROXY, true)
@@ -645,7 +645,7 @@ object V2rayConfigManager {
             }
 
             if (SettingsManager.isVpnMode()) {
-                if (SettingsManager.isUsingHevTun()) {
+                if (SettingsManager.shouldUseHevTun()) {
                     //hev-socks5-tunnel dns routing
                     v2rayConfig.routing.rules.add(
                         0, RulesBean(
