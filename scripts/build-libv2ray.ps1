@@ -3,7 +3,10 @@ param(
     [int]$AndroidApi = 21,
     [switch]$RunGoModTidy,
     [switch]$SkipGomobileInit,
-    [switch]$SkipToolBootstrap
+    [switch]$SkipToolBootstrap,
+    [switch]$BuildFromSource,
+    [string]$UpstreamReleaseRepo = "2dust/AndroidLibXrayLite",
+    [string]$UpstreamReleaseTag
 )
 
 Set-StrictMode -Version Latest
@@ -84,6 +87,68 @@ function Invoke-Checked {
         }
     } finally {
         Pop-Location
+    }
+}
+
+function Resolve-ReleaseTag {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath,
+        [string]$ExplicitTag
+    )
+
+    if ($ExplicitTag) {
+        return $ExplicitTag
+    }
+
+    Push-Location -LiteralPath $RepositoryPath
+    try {
+        $tag = (& git describe --tags --abbrev=0 2>$null).Trim()
+        if ($LASTEXITCODE -eq 0 -and $tag) {
+            return $tag
+        }
+    } finally {
+        Pop-Location
+    }
+
+    throw "Unable to determine AndroidLibXrayLite release tag. Pass -UpstreamReleaseTag or rerun with -BuildFromSource."
+}
+
+function Invoke-DownloadWithRetry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Uri,
+        [Parameter(Mandatory = $true)]
+        [string]$Destination,
+        [int]$Attempts = 3,
+        [long]$MinimumBytes = 1MB
+    )
+
+    $parent = Split-Path -Parent $Destination
+    if ($parent) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        if (Test-Path -LiteralPath $Destination) {
+            Remove-Item -LiteralPath $Destination -Force
+        }
+
+        try {
+            Invoke-WebRequest -Uri $Uri -OutFile $Destination
+            $file = Get-Item -LiteralPath $Destination -ErrorAction Stop
+            if ($file.Length -lt $MinimumBytes) {
+                throw "Downloaded file is unexpectedly small ($($file.Length) bytes)."
+            }
+
+            return $file
+        } catch {
+            if ($attempt -ge $Attempts) {
+                throw
+            }
+
+            Start-Sleep -Seconds ([Math]::Min(5 * $attempt, 15))
+        }
     }
 }
 
@@ -290,6 +355,44 @@ if (-not (Test-Path -LiteralPath $androidLibRoot)) {
     throw "AndroidLibXrayLite submodule not found at '$androidLibRoot'."
 }
 
+New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+New-Item -ItemType Directory -Path $appLibsDir -Force | Out-Null
+
+foreach ($path in @($artifactAar, $artifactSourcesJar, $targetSourcesJar)) {
+    if (Test-Path -LiteralPath $path) {
+        Remove-Item -LiteralPath $path -Force
+    }
+}
+
+Write-Host "Repo root      : $RepoRoot"
+Write-Host "Output AAR     : $artifactAar"
+Write-Host "App libs target: $targetAar"
+
+if (-not $BuildFromSource) {
+    try {
+        $resolvedReleaseTag = Resolve-ReleaseTag -RepositoryPath $androidLibRoot -ExplicitTag $UpstreamReleaseTag
+        $releaseBase = "https://github.com/$UpstreamReleaseRepo/releases/download/$resolvedReleaseTag"
+        $sourceJarUrl = "$releaseBase/libv2ray-sources.jar"
+        $aarUrl = "$releaseBase/libv2ray.aar"
+
+        Write-Host "Downloading upstream release AAR from $UpstreamReleaseRepo @ $resolvedReleaseTag..."
+        Invoke-DownloadWithRetry -Uri $aarUrl -Destination $artifactAar -MinimumBytes 10MB | Out-Null
+        Copy-Item -LiteralPath $artifactAar -Destination $targetAar -Force
+
+        try {
+            Invoke-DownloadWithRetry -Uri $sourceJarUrl -Destination $artifactSourcesJar -MinimumBytes 1KB | Out-Null
+            Copy-Item -LiteralPath $artifactSourcesJar -Destination $targetSourcesJar -Force
+        } catch {
+            Write-Warning "Unable to download libv2ray-sources.jar: $($_.Exception.Message)"
+        }
+
+        Write-Host "Using upstream release artifact: $resolvedReleaseTag"
+        return
+    } catch {
+        Write-Warning "Failed to download upstream release artifact. Falling back to local gomobile build. $($_.Exception.Message)"
+    }
+}
+
 Ensure-AndroidLibAssets -AndroidLibRoot $androidLibRoot
 
 $goExe = Resolve-ToolPath -Name "go"
@@ -315,22 +418,10 @@ $pathParts = @(
 ) | Where-Object { $_ }
 $env:PATH = [string]::Join([System.IO.Path]::PathSeparator, $pathParts)
 
-New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
-New-Item -ItemType Directory -Path $appLibsDir -Force | Out-Null
-
-foreach ($path in @($artifactAar, $artifactSourcesJar, $targetSourcesJar)) {
-    if (Test-Path -LiteralPath $path) {
-        Remove-Item -LiteralPath $path -Force
-    }
-}
-
-Write-Host "Repo root      : $RepoRoot"
 Write-Host "JAVA_HOME      : $javaHome"
 Write-Host "ANDROID SDK    : $sdkRoot"
 Write-Host "ANDROID NDK    : $ndkRoot"
 Write-Host "gomobile       : $($gomobileTools.GoMobile)"
-Write-Host "Output AAR     : $artifactAar"
-Write-Host "App libs target: $targetAar"
 
 if ($RunGoModTidy) {
     Write-Host "Running go mod tidy..."
@@ -342,7 +433,7 @@ if (-not $SkipGomobileInit) {
     Invoke-Checked -FilePath $gomobileTools.GoMobile -ArgumentList @("init", "-v") -WorkingDirectory $RepoRoot
 }
 
-Write-Host "Building libv2ray.aar..."
+Write-Host "Building libv2ray.aar from source..."
 Invoke-Checked -FilePath $gomobileTools.GoMobile -ArgumentList @(
     "bind",
     "-v",
