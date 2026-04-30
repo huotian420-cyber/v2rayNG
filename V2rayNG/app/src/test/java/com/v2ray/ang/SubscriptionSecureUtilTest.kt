@@ -25,6 +25,42 @@ class SubscriptionSecureUtilTest {
     }
 
     @Test
+    fun resolveDownloadedContent_decryptsSecureEnvelopeWithQueryKeyFallback() {
+        val key = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val subscriptionUrl =
+            "https://panel.example.com/panelx/subscriptions/v2r-secure.json?access_token=test&sub_key=${toBase64Url(key)}"
+        val plainText = "dmxlc3M6Ly8xMjM0"
+        val responseBody = buildEnvelopeJson(key, plainText, nonceField = "iv", ciphertextField = "data")
+
+        val resolved = SubscriptionSecureUtil.resolveDownloadedContent(subscriptionUrl, responseBody)
+
+        assertEquals(plainText, resolved)
+    }
+
+    @Test
+    fun toDownloadUrl_removesLocalSecureKeyButKeepsAccessToken() {
+        val key = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val subscriptionUrl =
+            "https://panel.example.com/panelx/subscriptions/v2r-secure.json?access_token=test&sub_key=${toBase64Url(key)}#${SubscriptionSecureUtil.SECURE_SUBSCRIPTION_KEY_FRAGMENT}=${toBase64Url(key)}"
+
+        val downloadUrl = SubscriptionSecureUtil.toDownloadUrl(subscriptionUrl)
+
+        assertEquals(
+            "https://panel.example.com/panelx/subscriptions/v2r-secure.json?access_token=test",
+            downloadUrl
+        )
+    }
+
+    @Test
+    fun toDownloadUrl_keepsRegularKeyQueryParameter() {
+        val subscriptionUrl = "https://panel.example.com/sub?key=provider-token#name"
+
+        val downloadUrl = SubscriptionSecureUtil.toDownloadUrl(subscriptionUrl)
+
+        assertEquals("https://panel.example.com/sub?key=provider-token", downloadUrl)
+    }
+
+    @Test
     fun resolveDownloadedContent_returnsOriginalWhenNoFragmentKey() {
         val responseBody = "{\"version\":\"xray-subscription-sealed-v1\"}"
 
@@ -47,7 +83,12 @@ class SubscriptionSecureUtilTest {
         SubscriptionSecureUtil.resolveDownloadedContent(subscriptionUrl, responseBody)
     }
 
-    private fun buildEnvelopeJson(key: ByteArray, plainText: String): String {
+    private fun buildEnvelopeJson(
+        key: ByteArray,
+        plainText: String,
+        nonceField: String = "nonce",
+        ciphertextField: String = "ciphertext"
+    ): String {
         val nonce = ByteArray(12).also { SecureRandom().nextBytes(it) }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, nonce))
@@ -58,8 +99,8 @@ class SubscriptionSecureUtilTest {
             mapOf(
                 "version" to "xray-subscription-sealed-v1",
                 "algorithm" to "aes-256-gcm",
-                "nonce" to toBase64Url(nonce),
-                "ciphertext" to toBase64Url(payload)
+                nonceField to toBase64Url(nonce),
+                ciphertextField to toBase64Url(payload)
             )
         )
     }

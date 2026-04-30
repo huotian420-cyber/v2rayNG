@@ -522,16 +522,17 @@ object AngConfigManager {
                 return SubscriptionUpdateResult(skipCount = 1)
             }
 
-            val url = HttpUtil.toIdnUrl(it.subscription.url)
-            if (!Utils.isValidUrl(url)) {
+            val subscriptionUrl = HttpUtil.toIdnUrl(it.subscription.url)
+            val downloadUrl = SubscriptionSecureUtil.toDownloadUrl(subscriptionUrl)
+            if (!Utils.isValidUrl(downloadUrl)) {
                 return SubscriptionUpdateResult(failureCount = 1)
             }
             if (!it.subscription.allowInsecureUrl) {
-                if (!Utils.isValidSubUrl(url)) {
+                if (!Utils.isValidSubUrl(downloadUrl)) {
                     return SubscriptionUpdateResult(failureCount = 1)
                 }
             }
-            LogUtil.i(AppConfig.TAG, url)
+            LogUtil.i(AppConfig.TAG, downloadUrl)
             val userAgent = it.subscription.userAgent
             val customHeaders = it.subscription.customHeaders
             val proxyUsername = SettingsManager.getSocksUsername()
@@ -539,14 +540,14 @@ object AngConfigManager {
 
             var configText = try {
                 val httpPort = SettingsManager.getHttpPort()
-                HttpUtil.getUrlContentWithUserAgent(url, userAgent, customHeaders, 15000, httpPort, proxyUsername, proxyPassword)
+                HttpUtil.getUrlContentWithUserAgent(downloadUrl, userAgent, customHeaders, 15000, httpPort, proxyUsername, proxyPassword)
             } catch (e: Exception) {
                 LogUtil.e(AppConfig.ANG_PACKAGE, "Update subscription: proxy not ready or other error", e)
                 ""
             }
             if (configText.isEmpty()) {
                 configText = try {
-                    HttpUtil.getUrlContentWithUserAgent(url, userAgent, customHeaders)
+                    HttpUtil.getUrlContentWithUserAgent(downloadUrl, userAgent, customHeaders)
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Update subscription: Failed to get URL content with user agent", e)
                     ""
@@ -555,7 +556,7 @@ object AngConfigManager {
             if (configText.isEmpty()) {
                 return SubscriptionUpdateResult(failureCount = 1)
             }
-            configText = SubscriptionSecureUtil.resolveDownloadedContent(url, configText)
+            configText = SubscriptionSecureUtil.resolveDownloadedContent(subscriptionUrl, configText)
 
             val count = parseConfigViaSub(configText, it.guid, false)
             if (count > 0) {

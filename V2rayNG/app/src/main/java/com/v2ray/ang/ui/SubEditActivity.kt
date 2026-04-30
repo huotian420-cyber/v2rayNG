@@ -16,6 +16,7 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.util.SubscriptionHeaderUtil
+import com.v2ray.ang.util.SubscriptionSecureUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -95,13 +96,14 @@ class SubEditActivity : BaseActivity() {
             toast(R.string.sub_setting_remarks)
             return false
         }
-        if (subItem.url.isNotEmpty()) {
-            if (!Utils.isValidUrl(subItem.url)) {
+        val downloadUrl = SubscriptionSecureUtil.toDownloadUrl(subItem.url)
+        if (downloadUrl.isNotEmpty()) {
+            if (!Utils.isValidUrl(downloadUrl)) {
                 toast(R.string.toast_invalid_url)
                 return false
             }
 
-            if (!Utils.isValidSubUrl(subItem.url)) {
+            if (!Utils.isValidSubUrl(downloadUrl)) {
                 toast(R.string.toast_insecure_url_protocol)
                 if (!subItem.allowInsecureUrl) {
                     return false
