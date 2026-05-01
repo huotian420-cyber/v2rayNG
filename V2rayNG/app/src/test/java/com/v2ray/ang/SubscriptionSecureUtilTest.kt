@@ -61,6 +61,20 @@ class SubscriptionSecureUtilTest {
     }
 
     @Test
+    fun hasSecureFragmentKey_detectsPanelSecureUrl() {
+        val key = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val subscriptionUrl =
+            "https://panel.example.com/panelx/subscriptions/v2r-secure.json?access_token=test#${SubscriptionSecureUtil.SECURE_SUBSCRIPTION_KEY_FRAGMENT}=${toBase64Url(key)}"
+
+        assertEquals(true, SubscriptionSecureUtil.hasSecureFragmentKey(subscriptionUrl))
+    }
+
+    @Test
+    fun hasSecureFragmentKey_ignoresRegularKeyQueryParameter() {
+        assertEquals(false, SubscriptionSecureUtil.hasSecureFragmentKey("https://panel.example.com/sub?key=provider-token#name"))
+    }
+
+    @Test
     fun resolveDownloadedContent_returnsOriginalWhenNoFragmentKey() {
         val responseBody = "{\"version\":\"xray-subscription-sealed-v1\"}"
 

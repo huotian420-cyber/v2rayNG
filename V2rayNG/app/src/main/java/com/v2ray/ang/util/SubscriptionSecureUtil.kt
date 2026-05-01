@@ -105,7 +105,15 @@ object SubscriptionSecureUtil {
                 val name = URLDecoder.decode(pair[0], Charsets.UTF_8.toString())
                 if (!SECURE_SUBSCRIPTION_KEY_NAMES.contains(name)) return@mapNotNull null
                 val value = if (pair.size > 1) URLDecoder.decode(pair[1], Charsets.UTF_8.toString()) else ""
-                if (value.isBlank()) null else decodeBase64Url(value)
+                if (value.isBlank()) {
+                    return@mapNotNull null
+                }
+                val key = try {
+                    decodeBase64Url(value)
+                } catch (_: IllegalArgumentException) {
+                    return@mapNotNull null
+                }
+                if (key.size == 32) key else null
             }
             .firstOrNull()
     }

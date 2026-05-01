@@ -198,8 +198,9 @@ object AngConfigManager {
             servers.lines()
                 .distinct()
                 .forEach { str ->
-                    if (Utils.isValidSubUrl(str)) {
-                        count += importUrlAsSubscription(str)
+                    val url = str.trim()
+                    if (Utils.isValidSubUrl(url)) {
+                        count += importUrlAsSubscription(url)
                     }
                 }
             return count

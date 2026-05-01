@@ -25,6 +25,20 @@ class UtilsTest {
     }
 
     @Test
+    fun test_isValidSubUrl_acceptsSecureSubscriptionWithFragmentKey() {
+        val subscriptionUrl =
+            "https://panel.example.com/panelx/subscriptions/v2r-secure.json?access_token=test#xray-sub-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+        assertTrue(Utils.isValidSubUrl(subscriptionUrl))
+    }
+
+    @Test
+    fun test_isValidSubUrl_rejectsSecureFragmentOnNonHttpUrl() {
+        assertFalse(Utils.isValidSubUrl("ftp://panel.example.com/sub#xray-sub-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+        assertFalse(Utils.isValidSubUrl("not-a-url#xray-sub-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+    }
+
+    @Test
     fun test_isIpAddress() {
         assertFalse(Utils.isIpAddress("114.113.112.266"))
         assertFalse(Utils.isIpAddress("666.666.666.666"))
