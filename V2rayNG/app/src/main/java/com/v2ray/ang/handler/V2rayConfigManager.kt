@@ -429,15 +429,8 @@ object V2rayConfigManager {
                 inbound1.sniffing?.destOverride?.add("fakedns")
             }
 
-            if (!Utils.isXray()) {
-                val inbound2 = JsonUtil.fromJson(JsonUtil.toJson(inbound1), V2rayConfig.InboundBean::class.java) ?: return false
-                inbound2.tag = EConfigType.HTTP.name.lowercase()
-                inbound2.port = SettingsManager.getHttpPort()
-                inbound2.protocol = EConfigType.HTTP.name.lowercase()
-                inbound2.settings?.auth = null
-                inbound2.settings?.udp = null
-                v2rayConfig.inbounds.add(inbound2)
-            }
+            val inbound2 = buildHttpInboundFromSocksInbound(inbound1, SettingsManager.getHttpPort()) ?: return false
+            v2rayConfig.inbounds.add(inbound2)
 
             if (!enableLocalProxy) {
                 v2rayConfig.inbounds.removeIf { it.protocol == "socks" || it.protocol == "http" }
@@ -453,6 +446,22 @@ object V2rayConfigManager {
             return false
         }
         return true
+    }
+
+    internal fun buildHttpInboundFromSocksInbound(
+        socksInbound: V2rayConfig.InboundBean,
+        httpPort: Int
+    ): V2rayConfig.InboundBean? {
+        val httpInbound = JsonUtil.fromJson(
+            JsonUtil.toJson(socksInbound),
+            V2rayConfig.InboundBean::class.java
+        ) ?: return null
+        httpInbound.tag = EConfigType.HTTP.name.lowercase()
+        httpInbound.port = httpPort
+        httpInbound.protocol = EConfigType.HTTP.name.lowercase()
+        httpInbound.settings?.auth = null
+        httpInbound.settings?.udp = null
+        return httpInbound
     }
 
     /**

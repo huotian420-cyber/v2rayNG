@@ -310,8 +310,10 @@ object SettingsManager {
      * @return The HTTP port.
      */
     fun getHttpPort(): Int {
-        return getSocksPort() + if (Utils.isXray()) 0 else 1
+        return getHttpPortForSocksPort(getSocksPort())
     }
+
+    internal fun getHttpPortForSocksPort(socksPort: Int): Int = socksPort + 1
 
     private fun IsDynamicSocksPort(): Boolean {
         return MmkvManager.decodeSettingsBool(AppConfig.PREF_DYNAMIC_SOCKS_PORT, false)
